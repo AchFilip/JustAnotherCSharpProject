@@ -1,0 +1,13 @@
+
+
+### Return all IPs
+GET http://localhost:5118/ip
+
+### Already Exists
+GET http://localhost:5118/ip/192.132.56.123
+
+### Fetch from IP2C and Save
+GET http://localhost:5118/ip/122.122.22.222
+
+### >DEBUG< Get from IP2C
+GET http://localhost:5118/ip/ip2c/192.132.56.123
