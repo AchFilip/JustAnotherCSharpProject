@@ -26,50 +26,45 @@ public static class IpInfoEndpoints
         //Receives data from db.
         group.MapGet("/dbs", (ProjectNoviContext dbContext) => 
         {
-            var countries = dbContext.Countries.ToList();
             var ips = dbContext.Ips.ToList();
 
             List<IpInfoDto> results = [];
 
-            for(int i = 0 ; i < countries.Count; i++){
+            for(int i = 0 ; i < ips.Count; i++){
                 results.Add(new IpInfoDto
                 (
                     ips[i].Id,
                     ips[i].IpAddress,
-                    countries[i].CountryName,
-                    countries[i].TwoLetterCode,
-                    countries[i].ThreeLetterCode
+                    ips[i].Country.CountryName,
+                    ips[i].Country.TwoLetterCode,
+                    ips[i].Country.ThreeLetterCode
                 ));
             }
             
-            return Results.Ok(results);
+            return Results.Ok(ips);
         });
 
-        // Check Cache --> Check DB --> Check IP2C
-        // Save to Cache <--  Save to DB <--  Get from IP2C
-        //GET /ip/1
+        //Task 1
         group.MapGet("/{ipAddress}", async (string ipAddress, ProjectNoviContext dbContext) =>
         {
 
             //Check Cache
-            //return it.
-            IpInfoDto? IpInfo = IpInfos.Find(IpInfo => IpInfo.IpAddress == ipAddress);
-            if (IpInfo is not null)
-            {
-                return Results.Ok(IpInfo);
-            }
 
 
-            // if not in cache Check Db
-            //save to cache and retun
+            //Check DB
+            //Get the ips from the db.
+            var ip = dbContext.Ips
+                    .Where(ip => ip.IpAddress == ipAddress);
 
+            //Check if is empty
+            if(ip.Any())
+                return Results.Ok(ip);
 
 
             //if not in db CheckIp2C
             //Save to DB and Cache and return
 
-            if (IpInfo is null)
-            {
+            
                 using var httpClient = new HttpClient();
 
                 // Build the URL with the provided IP address
@@ -86,7 +81,7 @@ public static class IpInfoEndpoints
 
                     // Split the string by semicolon
                     string[] result = content.Split(';');
-
+    
                     IpInfos.Add(new IpInfoDto(
                         IpInfos.Count + 1,
                         ipAddress,
@@ -109,7 +104,7 @@ public static class IpInfoEndpoints
                     {
                         Id = IpInfos.Count,
                         IpAddress = ipAddress,
-                        CountryId = 1,
+                        CountryId = dbContext.Countries.Count() + 1,
                         Country = country
                     };
 
@@ -119,18 +114,35 @@ public static class IpInfoEndpoints
 
 
                     // Return the content as the response
-                    return Results.Ok(result);
+                    return Results.Ok(IpInfos[IpInfos.Count-1]);
                 }
                 else
                 {
                     // Return a failure status if the request failed
                     return Results.StatusCode((int)response.StatusCode);
                 }
-            }
+        });
 
+        //Task 3
+        group.MapGet("/sql/{twolettercode?}", (string[]? twolettercode, ProjectNoviContext dbContext) => 
+        {
+                if(twolettercode == null || twolettercode.Length == 0){
+                    return Results.Ok($"No Countries");
+                }
 
+                //Get the ips from the db.
+                var ips = dbContext.Ips.ToList();
 
-            return Results.NotFound();
+                for(int i = 0 ; i<twolettercode.Length; i++){
+                    var code = twolettercode[i];
+                    var country = dbContext.Countries
+                                .Where(c => c.TwoLetterCode == code);
+
+                    if(country is not null)
+                        return Results.Ok(country);
+                }
+
+                return Results.Ok(twolettercode);
         });
 
         group.MapGet("/ip2c/{ipAddress}", async (string ipAddress) =>
@@ -169,6 +181,8 @@ public static class IpInfoEndpoints
                 return Results.StatusCode((int)response.StatusCode);
             }
         });
+
+
 
         return group;
     }
