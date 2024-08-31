@@ -1,5 +1,6 @@
-using System.Data.Entity;
 using System.Xml.Linq;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using ProjectNovi.Api.Data;
 using ProjectNovi.Api.Dtos;
 using ProjectNovi.Api.Entities;
@@ -45,21 +46,36 @@ public static class IpInfoEndpoints
         });
 
         //Task 1
-        group.MapGet("/{ipAddress}", async (string ipAddress, ProjectNoviContext dbContext) =>
+        group.MapGet("/{ipAddress}", async (string ipAddress, ProjectNoviContext dbContext, IMemoryCache cache) =>
         {
 
             //Check Cache
-
+            var cacheKey = $"IpInfo_{ipAddress}";
+            // Check the cache first
+            if (cache.TryGetValue(cacheKey, out IpInfoDto cachedIpInfo))
+            {
+                return Results.Ok(cachedIpInfo + " in Cache");
+            }
 
             //Check DB
             //Get the ips from the db.
             var ip = dbContext.Ips
+                    .Include(ip => ip.Country)
                     .Where(ip => ip.IpAddress == ipAddress);
 
-            //Check if is empty
-            if(ip.Any())
-                return Results.Ok(ip);
+            //Check if is not empty
+            if(ip.Any()){
+                IpInfoDto tett = new(
+                    1,
+                    "122.222.22.222",
+                    "Japan",
+                    "JP",
+                    "JPN"
+                );
 
+                cache.Set(cacheKey, tett, TimeSpan.FromHours(1)); // Cache for 1 hour
+                return Results.Ok("To VRika alla dn boro na to printaro gamw" + ip.ToList() + " in DB");
+            }
 
             //if not in db CheckIp2C
             //Save to DB and Cache and return
@@ -112,9 +128,10 @@ public static class IpInfoEndpoints
                     dbContext.Add(ipEntity);
                     await dbContext.SaveChangesAsync();
 
+                    cache.Set(cacheKey, IpInfos[IpInfos.Count-1], TimeSpan.FromHours(1)); // Cache for 1 hour
 
                     // Return the content as the response
-                    return Results.Ok(IpInfos[IpInfos.Count-1]);
+                    return Results.Ok(IpInfos[IpInfos.Count-1] + " Found in IP2C");
                 }
                 else
                 {
@@ -124,10 +141,27 @@ public static class IpInfoEndpoints
         });
 
         //Task 3
-        group.MapGet("/sql/{twolettercode?}", (string[]? twolettercode, ProjectNoviContext dbContext) => 
+        group.MapGet("/sql/{twolettercode}", (string[]? twolettercode, ProjectNoviContext dbContext) => 
         {
-                if(twolettercode == null || twolettercode.Length == 0){
-                    return Results.Ok($"No Countries");
+                //If null return everything
+                if (twolettercode == null)
+                {
+                    var allCountriesQuery = @"
+                        SELECT c.CountryName, 
+                            COUNT(ip.Id) AS AddressesCount
+                        FROM Countries c
+                        LEFT JOIN IPs ip ON ip.CountryId = c.Id
+                        GROUP BY c.CountryName";
+
+                    var allCountries = dbContext.Countries
+                                    .FromSqlRaw(allCountriesQuery)
+                                    .ToList();
+
+                    return Results.Ok(allCountries + " From Null");
+                }
+
+                if(twolettercode.Length == 0){
+                    return Results.NotFound($"You did not gave any countries");
                 }
 
                 //Get the ips from the db.
