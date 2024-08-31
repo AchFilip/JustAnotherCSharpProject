@@ -1,3 +1,4 @@
+using System.Data.Entity;
 using System.Xml.Linq;
 using ProjectNovi.Api.Data;
 using ProjectNovi.Api.Dtos;
@@ -21,6 +22,29 @@ public static class IpInfoEndpoints
         //GET /ip
         group.MapGet("/", () => IpInfos);
 
+        //GET /ip/dbs 
+        //Receives data from db.
+        group.MapGet("/dbs", (ProjectNoviContext dbContext) => 
+        {
+            var countries = dbContext.Countries.ToList();
+            var ips = dbContext.Ips.ToList();
+
+            List<IpInfoDto> results = [];
+
+            for(int i = 0 ; i < countries.Count; i++){
+                results.Add(new IpInfoDto
+                (
+                    ips[i].Id,
+                    ips[i].IpAddress,
+                    countries[i].CountryName,
+                    countries[i].TwoLetterCode,
+                    countries[i].ThreeLetterCode
+                ));
+            }
+            
+            return Results.Ok(results);
+        });
+
         // Check Cache --> Check DB --> Check IP2C
         // Save to Cache <--  Save to DB <--  Get from IP2C
         //GET /ip/1
@@ -30,14 +54,15 @@ public static class IpInfoEndpoints
             //Check Cache
             //return it.
             IpInfoDto? IpInfo = IpInfos.Find(IpInfo => IpInfo.IpAddress == ipAddress);
-            if(IpInfo is not null){
+            if (IpInfo is not null)
+            {
                 return Results.Ok(IpInfo);
             }
 
 
             // if not in cache Check Db
             //save to cache and retun
-            
+
 
 
             //if not in db CheckIp2C
@@ -71,25 +96,27 @@ public static class IpInfoEndpoints
                     ));
 
 
-                        // Create a new Country and IP entity
-                        var country = new Country
-                        {
-                            Id = IpInfos.Count,
-                            CountryName = result[3],
-                            TwoLetterCode = result[1],
-                            ThreeLetterCode = result[2]
-                        };
+                    // Create a new Country and IP entity
+                    var country = new Country
+                    {
+                        Id = IpInfos.Count,
+                        CountryName = result[3],
+                        TwoLetterCode = result[1],
+                        ThreeLetterCode = result[2]
+                    };
 
-                        var ipEntity = new IP
-                        {
-                            Id = IpInfos.Count,
-                            CountryId = 1,
-                            Country = country
-                        };
+                    var ipEntity = new IP
+                    {
+                        Id = IpInfos.Count,
+                        IpAddress = ipAddress,
+                        CountryId = 1,
+                        Country = country
+                    };
 
-                        // Save to the database
-                        dbContext.Add(ipEntity);
-                        await dbContext.SaveChangesAsync();
+                    // Save to the database
+                    dbContext.Add(ipEntity);
+                    await dbContext.SaveChangesAsync();
+
 
                     // Return the content as the response
                     return Results.Ok(result);

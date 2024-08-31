@@ -304,3 +304,4 @@ C:\Users\grgur\Documents\ProjectNovi\obj\Debug\net8.0\refint\ProjectNovi.dll
 C:\Users\grgur\Documents\ProjectNovi\obj\Debug\net8.0\ProjectNovi.pdb
 C:\Users\grgur\Documents\ProjectNovi\obj\Debug\net8.0\ProjectNovi.genruntimeconfig.cache
 C:\Users\grgur\Documents\ProjectNovi\obj\Debug\net8.0\ref\ProjectNovi.dll
+C:\Users\grgur\Documents\ProjectNovi\obj\Debug\net8.0\ProjectNovi.sourcelink.json

@@ -48,6 +48,10 @@ namespace ProjectNovi.Data.Migrations
                     b.Property<int>("CountryId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CountryId");
