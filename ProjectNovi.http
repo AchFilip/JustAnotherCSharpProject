@@ -1,13 +1,14 @@
+### Task 1
+### Fetch from IP2C and Save 
+GET http://localhost:5118/ip/122.222.22.219
 
+### Task 3
+### Get the SQL report
+GET http://localhost:5118/ip/sql/countries?twolettercode=JP
 
-### Return all IPs
-GET http://localhost:5118/ip
+### Get the SQL report
+GET http://localhost:5118/ip/sql/countries?twolettercode=null
 
-### Already Exists
-GET http://localhost:5118/ip/192.132.56.123
-
-### Fetch from IP2C and Save
-GET http://localhost:5118/ip/122.122.22.222
 
 ### >DEBUG< Get from IP2C
 GET http://localhost:5118/ip/ip2c/192.132.56.123
