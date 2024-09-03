@@ -10,4 +10,6 @@ public class Country
     public required string TwoLetterCode {get; set;}
 
     public required string ThreeLetterCode {get; set;}
+
+    public DateTime UpdatedAt {get; set;}
 }

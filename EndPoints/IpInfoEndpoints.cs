@@ -5,6 +5,9 @@ using ProjectNovi.Api.Data;
 using ProjectNovi.Api.Dtos;
 using ProjectNovi.Api.Entities;
 
+using System.IO;
+using System.Text;
+
 namespace ProjectNovi.Api.Endpoints;
 
 
@@ -18,24 +21,12 @@ public static class IpInfoEndpoints
         //Receives data from db.
         group.MapGet("/dbs", (ProjectNoviContext dbContext) =>
         {
-            var ips = dbContext.Ips.ToList();
-
-            List<IpInfoDto> results = [];
-
-            for (int i = 0; i < ips.Count; i++)
-            {
-                results.Add(new IpInfoDto
-                (
-                    ips[i].Id,
-                    ips[i].IpAddress,
-                    ips[i].Country.CountryName,
-                    ips[i].Country.TwoLetterCode,
-                    ips[i].Country.ThreeLetterCode
-                ));
-            }
+            var ips = dbContext.Ips
+                    .Include(i => i.Country).ToList();
 
             return Results.Ok(ips);
         });
+
 
         //Task 1
         group.MapGet("/{ipAddress}", async (string ipAddress, ProjectNoviContext dbContext, IMemoryCache cache) =>
@@ -80,7 +71,8 @@ public static class IpInfoEndpoints
                     ipAddress,
                     result[3],
                     result[1],
-                    result[2]
+                    result[2],
+                    DateTime.Now
                 );
 
                 var country = new Country
@@ -88,7 +80,8 @@ public static class IpInfoEndpoints
                     Id = IpInfos.Id,
                     CountryName = result[3],
                     TwoLetterCode = result[1],
-                    ThreeLetterCode = result[2]
+                    ThreeLetterCode = result[2],
+                    UpdatedAt = IpInfos.UpdatedAt
                 };
 
                 var ipEntity = new IP
@@ -116,26 +109,43 @@ public static class IpInfoEndpoints
         });
 
         //Task 3
-        //TODO: EntityFramework -> Raw SQL
-        //TODO: Create a .csv report
-        //TODO: Add last edited time
+        //TODO: EntityFramework -> Raw SQL for null
+        //TODO: EntityFramework -> Raw SQL for specific
+        //TODO: Create a .csv report -> for null
+        //TODO: Create .csv report -> exact country
         group.MapGet("/sql/{twolettercode}", (string[]? twolettercode, ProjectNoviContext dbContext) =>
         {
             //If null return everything
             if (twolettercode[0] == "null")
             {
-                var allCountriesQuery = @"
-                        SELECT c.CountryName, 
-                            COUNT(ip.Id) AS AddressesCount
-                        FROM Countries c
-                        LEFT JOIN IPs ip ON ip.CountryId = c.Id
-                        GROUP BY c.CountryName";
 
-                var allCountries = dbContext.Countries
-                                .FromSqlRaw(allCountriesQuery)
-                                .ToList();
+                // Retrieve IpInfo records using raw SQL
+                // var ipInfos = dbContext.Ips
+                //     .FromSqlRaw(@"
+                //     SELECT 
+                //         c.CountryName, 
+                //         COUNT(i.Id) AS AddressesCount, 
+                //         MAX(c.UpdatedAt) AS LastAddressUpdated
+                //     FROM Ips i
+                //     INNER JOIN Countries c ON i.CountryId = c.Id")
+                //     .ToList();
 
-                return Results.Ok(allCountries + " From Null");
+                var ipInfos = dbContext.Ips
+                    .FromSqlRaw(@"
+                    SELECT *
+                    FROM Ips i
+                    ")
+                    .ToList();
+
+
+                // Create a StringBuilder to construct the CSV content
+                var csv = new StringBuilder();
+                
+                foreach(var t in ipInfos){
+                    Console.WriteLine($" {t.CountryId} {t.IpAddress}");
+                }
+
+                return Results.Ok(ipInfos + " From Null");
             }
 
             if (twolettercode.Length == 0)

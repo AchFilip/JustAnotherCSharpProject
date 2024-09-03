@@ -10,5 +10,6 @@ public record class IpInfoDto(
     string IpAddress,
     string CountryName,
     string TwoLetterCode,
-    string ThreeLetterCode
+    string ThreeLetterCode,
+    DateTime UpdatedAt
 );
