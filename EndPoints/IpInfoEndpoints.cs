@@ -46,8 +46,16 @@ public static class IpInfoEndpoints
 
             if (ip != null)
             {
-                cache.Set(cacheKey, ip, TimeSpan.FromHours(1)); // Cache for 1 hour
-                return Results.Ok(ip + " in DB");
+                IpInfoDto IpInfos = new IpInfoDto(
+                    ip.Id,
+                    ipAddress,
+                    ip.Country.CountryName,
+                    ip.Country.TwoLetterCode,
+                    ip.Country.ThreeLetterCode,
+                    ip.Country.UpdatedAt
+                );
+                cache.Set(cacheKey, IpInfos, TimeSpan.FromHours(1)); // Cache for 1 hour
+                return Results.Ok(IpInfos + " in DB");
             }
 
             //If not in Database, fetch from IP2C
