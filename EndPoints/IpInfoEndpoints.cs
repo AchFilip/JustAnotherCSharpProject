@@ -146,8 +146,7 @@ public static class IpInfoEndpoints
                                  + "}\n";
                 }
                 
-                Console.WriteLine(result);
-                return Results.Ok( result + " From Null");
+                return Results.Ok(result);
             }
 
             if (twolettercode.Length == 0)
