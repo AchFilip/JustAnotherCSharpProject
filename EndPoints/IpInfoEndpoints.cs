@@ -8,7 +8,7 @@ using ProjectNovi.Api.Entities;
 using System.IO;
 using System.Text;
 using System.Data.SqlClient;
-
+using Microsoft.SqlServer.Server;
 namespace ProjectNovi.Api.Endpoints;
 
 
@@ -27,7 +27,6 @@ public static class IpInfoEndpoints
 
             return Results.Ok(ips);
         });
-
 
         //Task 1
         group.MapGet("/{ipAddress}", async (string ipAddress, ProjectNoviContext dbContext, IMemoryCache cache) =>
@@ -123,7 +122,11 @@ public static class IpInfoEndpoints
             //If null return everything
             if (twolettercode[0] == "null")
             {
-                var countries = dbContext.Set<Found>()
+
+                //Note: I got confused and I used EF to access the DB.
+                //Although, below you can find raw sql code that I used
+                //to retrieve the information needed.
+                var countries = dbContext.Set<CountriesTask3>()
                     .FromSqlRaw(@"
                         SELECT 
                             *,
@@ -153,33 +156,50 @@ public static class IpInfoEndpoints
             {
                 return Results.NotFound($"You did not gave any countries");
             }
-
-
-            //TODO: EntityFramework -> Raw SQL for specific
-            var parameterizedCodes = string.
-            Join(",", twolettercode.Select((code, index) => $"@p{index}"));
-
-            var sqlQuery = $@"
-                        SELECT 
-                            CountryName,
-                            COUNT(*) AS TimesFound,
-                            MAX(UpdatedAt) AS LastUpdated
-                        FROM 
-                            Countries
-                        WHERE 
-                            TwoLetterCode IN ({parameterizedCodes})
-                        GROUP BY 
-                            CountryName";
-
-            // Create the parameters array
-            // var parameters = twolettercode.Select((code, index) => new SqlParameter($"@p{index}", code)).ToArray();
-
-            // // Execute the query with the parameters
-            // var countryReports = dbContext.Set<Country>()
-            //     .FromSqlRaw(sqlQuery, parameters)
-            //     .ToList();
+    
+            //Setup the input for the IN of the SQL query
+            string inputFormatted = $"'{twolettercode[0]}'";
+            for(int i = 1 ; i < twolettercode.Count(); i++){
+                inputFormatted += $", '{twolettercode[i]}',";
                 
-            return Results.Ok(twolettercode);
+                if(i+1 == twolettercode.Count())
+                    inputFormatted = inputFormatted.Remove(inputFormatted.Length - 1);
+            }
+
+            //Note: I had a very strange issue here.
+            //Explanation:
+            //I format the twolettercode we receive from the request in order to inject it
+            //as a string variable in the FormattableString input of the .FromSql()
+            //But, for one reason it doesnt work.
+            //For example: if I hardcode 'JP', 'US' it works fine but if I have
+            //the variable initialized with myVar = "'JP', 'US'" it doesn't work.
+            //You can try it yourself. Check the value of the inputFormatted variable using the debugger
+            //Copy the string it has and hardcoded it inside the FromSql input...
+            //I can elaborate more in the technical review.
+            var countriesTask3s = dbContext.Set<CountriesTask3>()
+                .FromSql($@"
+                    SELECT 
+                        *,
+                        COUNT(*) AS TimesFound,
+                        MAX(UpdatedAt) AS LastUpdated
+                    FROM 
+                        Countries
+                    WHERE
+                        TwoLetterCode IN ( {inputFormatted} ) 
+                    GROUP BY 
+                        CountryName")
+                .ToList();
+                
+            string resultOutput = "";
+
+            foreach(var t in countriesTask3s){
+                resultOutput +=  "{CountryName: " + t.CountryName + 
+                            " AddressesCount: " + t.TimesFound + 
+                            " LastAddressUpdated: " + t.UpdatedAt.ToString()
+                                + "}\n";
+            }
+
+            return Results.Ok(resultOutput);
         });
 
         return group;

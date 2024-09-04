@@ -1,7 +1,7 @@
 namespace ProjectNovi.Api.Entities;
 
 
-public class Found
+public class CountriesTask3
 {
     public int Id {get; set;}
 

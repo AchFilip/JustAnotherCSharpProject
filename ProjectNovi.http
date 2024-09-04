@@ -11,24 +11,16 @@ GET http://localhost:5118/ip/111.111.12.212
 GET http://localhost:5118/ip/111.111.21.213
 ###
 GET http://localhost:5118/ip/111.112.11.214
-
-
 ###
 GET http://localhost:5118/ip/192.45.123.30
-
 
 
 ### Task 3
 ### Get the data of the country with the JP as a TwoLetterCode
 GET http://localhost:5118/ip/sql/countries?twolettercode=JP
 
-### Get the data of the contries with the JP and US as a TwoLetterCde
+### Get the data of the contries with the JP and US as a TwoLetterCode
 GET http://localhost:5118/ip/sql/countries?twolettercode=JP&twolettercode=US
 
 ### Get the SQL report of all the countries.
 GET http://localhost:5118/ip/sql/countries?twolettercode=null
-
-
-
-### >DEBUG< Return all IPs
-GET http://localhost:5118/ip/dbs

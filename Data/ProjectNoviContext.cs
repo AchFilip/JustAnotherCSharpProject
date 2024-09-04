@@ -13,5 +13,5 @@ public class ProjectNoviContext(DbContextOptions<ProjectNoviContext> options)
     public DbSet<Country> Countries => Set<Country>();
 
 
-    public DbSet<Found> Found => Set<Found>();
+    public DbSet<CountriesTask3> T3_Countries => Set<CountriesTask3>();
 }
