@@ -7,6 +7,7 @@ using ProjectNovi.Api.Entities;
 
 using System.IO;
 using System.Text;
+using System.Data.SqlClient;
 
 namespace ProjectNovi.Api.Endpoints;
 
@@ -35,7 +36,7 @@ public static class IpInfoEndpoints
             var cacheKey = $"IpInfo_{ipAddress}";
             if (cache.TryGetValue(cacheKey, out IpInfoDto cachedIpInfo))
             {
-                return Results.Ok(cachedIpInfo + " in Cache");
+                return Results.Ok(cachedIpInfo);
             }
 
             //Check Database
@@ -55,7 +56,7 @@ public static class IpInfoEndpoints
                     ip.Country.UpdatedAt
                 );
                 cache.Set(cacheKey, IpInfos, TimeSpan.FromHours(1)); // Cache for 1 hour
-                return Results.Ok(IpInfos + " in DB");
+                return Results.Ok(IpInfos);
             }
 
             //If not in Database, fetch from IP2C
@@ -107,7 +108,7 @@ public static class IpInfoEndpoints
                 cache.Set(cacheKey, IpInfos, TimeSpan.FromHours(1)); // Cache for 1 hour
 
                 // Return the content as the response
-                return Results.Ok(IpInfos + " Found in IP2C");
+                return Results.Ok(IpInfos);
             }
             else
             {
@@ -117,20 +118,16 @@ public static class IpInfoEndpoints
         });
 
         //Task 3
-        //TODO: EntityFramework -> Raw SQL for null
-        //TODO: EntityFramework -> Raw SQL for specific
-        //TODO: Create a .csv report -> for null
-        //TODO: Create .csv report -> exact country
         group.MapGet("/sql/{twolettercode}", (string[]? twolettercode, ProjectNoviContext dbContext) =>
         {
             //If null return everything
             if (twolettercode[0] == "null")
             {
-                var countries = dbContext.Countries
+                var countries = dbContext.Set<Found>()
                     .FromSqlRaw(@"
                         SELECT 
                             *,
-                            COUNT(*) AS TimeFound,
+                            COUNT(*) AS TimesFound,
                             MAX(UpdatedAt) AS LastUpdated
                         FROM 
                             Countries
@@ -138,16 +135,18 @@ public static class IpInfoEndpoints
                             CountryName")
                     .ToList();
 
+                countries = countries.OrderByDescending(c => c.TimesFound).ToList();
+                
                 string result = "";
-                //TODO: Count of IPs.
+
                 foreach(var t in countries){
                     result +=  "{CountryName: " + t.CountryName + 
-                                " AddressesCount: " + "$MissingCount$" + 
+                                " AddressesCount: " + t.TimesFound + 
                                 " LastAddressUpdated: " + t.UpdatedAt.ToString()
                                  + "}\n";
                 }
                 
-                // Console.WriteLine(result);
+                Console.WriteLine(result);
                 return Results.Ok( result + " From Null");
             }
 
@@ -156,20 +155,31 @@ public static class IpInfoEndpoints
                 return Results.NotFound($"You did not gave any countries");
             }
 
-            //TODO: Change entityframework to raw sql
-            //Get the ips from the db.
-            var ips = dbContext.Ips.ToList();
 
-            for (int i = 0; i < twolettercode.Length; i++)
-            {
-                var code = twolettercode[i];
-                var country = dbContext.Countries
-                            .Where(c => c.TwoLetterCode == code);
+            //TODO: EntityFramework -> Raw SQL for specific
+            var parameterizedCodes = string.
+            Join(",", twolettercode.Select((code, index) => $"@p{index}"));
 
-                if (country is not null)
-                    return Results.Ok(country);
-            }
+            var sqlQuery = $@"
+                        SELECT 
+                            CountryName,
+                            COUNT(*) AS TimesFound,
+                            MAX(UpdatedAt) AS LastUpdated
+                        FROM 
+                            Countries
+                        WHERE 
+                            TwoLetterCode IN ({parameterizedCodes})
+                        GROUP BY 
+                            CountryName";
 
+            // Create the parameters array
+            // var parameters = twolettercode.Select((code, index) => new SqlParameter($"@p{index}", code)).ToArray();
+
+            // // Execute the query with the parameters
+            // var countryReports = dbContext.Set<Country>()
+            //     .FromSqlRaw(sqlQuery, parameters)
+            //     .ToList();
+                
             return Results.Ok(twolettercode);
         });
 
