@@ -126,34 +126,29 @@ public static class IpInfoEndpoints
             //If null return everything
             if (twolettercode[0] == "null")
             {
-
-                // Retrieve IpInfo records using raw SQL
-                // var ipInfos = dbContext.Ips
-                //     .FromSqlRaw(@"
-                //     SELECT 
-                //         c.CountryName, 
-                //         COUNT(i.Id) AS AddressesCount, 
-                //         MAX(c.UpdatedAt) AS LastAddressUpdated
-                //     FROM Ips i
-                //     INNER JOIN Countries c ON i.CountryId = c.Id")
-                //     .ToList();
-
-                var ipInfos = dbContext.Ips
+                var countries = dbContext.Countries
                     .FromSqlRaw(@"
-                    SELECT *
-                    FROM Ips i
-                    ")
+                        SELECT 
+                            *,
+                            COUNT(*) AS TimeFound,
+                            MAX(UpdatedAt) AS LastUpdated
+                        FROM 
+                            Countries
+                        GROUP BY 
+                            CountryName")
                     .ToList();
 
-
-                // Create a StringBuilder to construct the CSV content
-                var csv = new StringBuilder();
-                
-                foreach(var t in ipInfos){
-                    Console.WriteLine($" {t.CountryId} {t.IpAddress}");
+                string result = "";
+                //TODO: Count of IPs.
+                foreach(var t in countries){
+                    result +=  "{CountryName: " + t.CountryName + 
+                                " AddressesCount: " + "$MissingCount$" + 
+                                " LastAddressUpdated: " + t.UpdatedAt.ToString()
+                                 + "}\n";
                 }
-
-                return Results.Ok(ipInfos + " From Null");
+                
+                // Console.WriteLine(result);
+                return Results.Ok( result + " From Null");
             }
 
             if (twolettercode.Length == 0)
